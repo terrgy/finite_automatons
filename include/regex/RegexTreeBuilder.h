@@ -145,7 +145,7 @@ struct RegExTreeBuilder {
     static NFA KleeneStarBuilder(int pos, std::vector<Vertex>& graph) {
         NFA nfa = nfa_builder(graph[pos].edges.front(), graph);
         int new_index = nfa.add_vertices(1);
-        for (auto end_vertex : nfa.end_vertices) {
+        for (auto end_vertex : nfa.terminal_vertices) {
             nfa.add_edge(end_vertex, new_index, "");
         }
         nfa.add_edge(new_index, nfa.start_vertex, "");
@@ -157,7 +157,7 @@ struct RegExTreeBuilder {
 
     static NFA KleenePlusBuilder(int pos, std::vector<Vertex>& graph) {
         NFA nfa = nfa_builder(graph[pos].edges.front(), graph);
-        for (auto end_vertex : nfa.end_vertices) {
+        for (auto end_vertex : nfa.terminal_vertices) {
             nfa.add_edge(end_vertex, nfa.start_vertex, "");
         }
         return nfa;
@@ -175,11 +175,11 @@ struct RegExTreeBuilder {
             nfa = nfa_op;
             for (int i = 1; i < power; ++i) {
                 int shift = nfa.merge(nfa_op);
-                for (int end_vertex : nfa.end_vertices) {
+                for (int end_vertex : nfa.terminal_vertices) {
                     nfa.add_edge(end_vertex, shift + nfa_op.start_vertex, "");
                 }
                 nfa.remove_all_end_vertices();
-                for (int end_vertex : nfa_op.end_vertices) {
+                for (int end_vertex : nfa_op.terminal_vertices) {
                     nfa.set_end(shift + end_vertex);
                 }
             }
@@ -196,7 +196,7 @@ struct RegExTreeBuilder {
         nfa.add_edge(new_start, nfa.start_vertex, "");
         nfa.add_edge(new_start, nfa2.start_vertex + shift, "");
         nfa.set_start(new_start);
-        for (int end_vertex : nfa2.end_vertices) {
+        for (int end_vertex : nfa2.terminal_vertices) {
             nfa.set_end(shift + end_vertex);
         }
 
@@ -208,11 +208,11 @@ struct RegExTreeBuilder {
         NFA nfa2 = nfa_builder(graph[pos].edges.back(), graph);
 
         int shift = nfa.merge(nfa2);
-        for (int end_vertex : nfa.end_vertices) {
+        for (int end_vertex : nfa.terminal_vertices) {
             nfa.add_edge(end_vertex, shift + nfa2.start_vertex, "");
         }
         nfa.remove_all_end_vertices();
-        for (int end_vertex : nfa2.end_vertices) {
+        for (int end_vertex : nfa2.terminal_vertices) {
             nfa.set_end(shift + end_vertex);
         }
 
