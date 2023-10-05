@@ -11,8 +11,8 @@ struct RegExTreeBuilder {
         std::vector<int> edges;
         std::function<NFA(int, std::vector<Vertex>&)> builder;
 
-        Vertex(std::string  operation, std::function<NFA(int, std::vector<Vertex>&)> builder);
-        Vertex(std::string  operation, std::vector<int> edges, std::function<NFA(int, std::vector<Vertex>&)> builder);
+        Vertex(std::string operation, std::function<NFA(int, std::vector<Vertex>&)> builder);
+        Vertex(std::string operation, std::vector<int> edges, std::function<NFA(int, std::vector<Vertex>&)> builder);
     };
 
     struct RegExParseOperation {
@@ -24,7 +24,7 @@ struct RegExTreeBuilder {
     std::string regex;
     std::vector<Vertex> graph;
 
-    RegExTreeBuilder(std::string& regex);
+    RegExTreeBuilder(const std::string& regex);
 
     static void RemoveUnnecessaryParenthesis(int pos, std::string& regex) {
         int left_pos = pos;
@@ -145,10 +145,10 @@ struct RegExTreeBuilder {
     static NFA KleeneStarBuilder(int pos, std::vector<Vertex>& graph) {
         NFA nfa = nfa_builder(graph[pos].edges.front(), graph);
         int new_index = nfa.add_vertices(1);
-        for (auto end_vertex : nfa.terminal_vertices) {
+        for (auto end_vertex : nfa._terminal_vertices) {
             nfa.add_edge(end_vertex, new_index, "");
         }
-        nfa.add_edge(new_index, nfa.start_vertex, "");
+        nfa.add_edge(new_index, nfa._start_vertex, "");
         nfa.remove_all_end_vertices();
         nfa.set_start(new_index);
         nfa.set_end(new_index);
@@ -157,8 +157,8 @@ struct RegExTreeBuilder {
 
     static NFA KleenePlusBuilder(int pos, std::vector<Vertex>& graph) {
         NFA nfa = nfa_builder(graph[pos].edges.front(), graph);
-        for (auto end_vertex : nfa.terminal_vertices) {
-            nfa.add_edge(end_vertex, nfa.start_vertex, "");
+        for (auto end_vertex : nfa._terminal_vertices) {
+            nfa.add_edge(end_vertex, nfa._start_vertex, "");
         }
         return nfa;
     }
@@ -174,12 +174,12 @@ struct RegExTreeBuilder {
             NFA nfa_op = nfa_builder(graph[pos].edges.front(), graph);
             nfa = nfa_op;
             for (int i = 1; i < power; ++i) {
-                int shift = nfa.merge(nfa_op);
-                for (int end_vertex : nfa.terminal_vertices) {
-                    nfa.add_edge(end_vertex, shift + nfa_op.start_vertex, "");
+                size_t shift = nfa.merge(nfa_op);
+                for (size_t end_vertex : nfa._terminal_vertices) {
+                    nfa.add_edge(end_vertex, shift + nfa_op._start_vertex, "");
                 }
                 nfa.remove_all_end_vertices();
-                for (int end_vertex : nfa_op.terminal_vertices) {
+                for (size_t end_vertex : nfa_op._terminal_vertices) {
                     nfa.set_end(shift + end_vertex);
                 }
             }
@@ -193,10 +193,10 @@ struct RegExTreeBuilder {
 
         int shift = nfa.merge(nfa2);
         int new_start = nfa.add_vertices(1);
-        nfa.add_edge(new_start, nfa.start_vertex, "");
-        nfa.add_edge(new_start, nfa2.start_vertex + shift, "");
+        nfa.add_edge(new_start, nfa._start_vertex, "");
+        nfa.add_edge(new_start, nfa2._start_vertex + shift, "");
         nfa.set_start(new_start);
-        for (int end_vertex : nfa2.terminal_vertices) {
+        for (int end_vertex : nfa2._terminal_vertices) {
             nfa.set_end(shift + end_vertex);
         }
 
@@ -208,11 +208,11 @@ struct RegExTreeBuilder {
         NFA nfa2 = nfa_builder(graph[pos].edges.back(), graph);
 
         int shift = nfa.merge(nfa2);
-        for (int end_vertex : nfa.terminal_vertices) {
-            nfa.add_edge(end_vertex, shift + nfa2.start_vertex, "");
+        for (int end_vertex : nfa._terminal_vertices) {
+            nfa.add_edge(end_vertex, shift + nfa2._start_vertex, "");
         }
         nfa.remove_all_end_vertices();
-        for (int end_vertex : nfa2.terminal_vertices) {
+        for (int end_vertex : nfa2._terminal_vertices) {
             nfa.set_end(shift + end_vertex);
         }
 

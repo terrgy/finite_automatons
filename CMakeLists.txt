@@ -81,6 +81,8 @@ endif()
 
 include_directories(include/nfa)
 include_directories(include/regex)
+include_directories(include/dfa)
+include_directories(include/automaton)
 
 add_subdirectory(src)
 add_subdirectory(tests)

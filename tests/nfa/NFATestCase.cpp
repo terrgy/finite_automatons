@@ -5,42 +5,42 @@
 TEST_F(NFATestCase, CreationTest) {
     NFA nfa(5);
     ASSERT_TRUE(nfa.size() == 5);
-    ASSERT_TRUE(nfa.graph.size() == 5);
+    ASSERT_TRUE(nfa._graph.size() == 5);
 
     nfa.set_start(3);
-    ASSERT_TRUE(nfa.start_vertex == 3);
+    ASSERT_TRUE(nfa._start_vertex == 3);
 
     nfa.set_end(0);
     nfa.set_end(1);
     nfa.set_end(2);
     std::vector<size_t> test = {0, 1, 2};
-    ASSERT_TRUE(nfa.terminal_vertices == test);
+    ASSERT_TRUE(nfa._terminal_vertices == test);
     for (auto i : {0, 1, 2}) {
-        ASSERT_TRUE(nfa.graph[i].is_terminal);
+        ASSERT_TRUE(nfa._graph[i].is_terminal());
     }
 
     nfa.remove_all_end_vertices();
-    ASSERT_TRUE(nfa.terminal_vertices.empty());
+    ASSERT_TRUE(nfa._terminal_vertices.empty());
     for (auto i : {0, 1, 2}) {
-        ASSERT_FALSE(nfa.graph[i].is_terminal);
+        ASSERT_FALSE(nfa._graph[i].is_terminal());
     }
 
     nfa.add_bidirectional_edge(0, 1, "a");
-    ASSERT_TRUE(nfa.graph[0].edges.size() == 1);
-    ASSERT_TRUE(nfa.graph[0].edges[0].to == 1);
-    ASSERT_TRUE(nfa.graph[0].edges[0].symbol == "a");
-    ASSERT_TRUE(nfa.graph[1].edges.size() == 1);
-    ASSERT_TRUE(nfa.graph[1].edges[0].to == 0);
-    ASSERT_TRUE(nfa.graph[1].edges[0].symbol == "a");
+    ASSERT_TRUE(nfa._graph[0]._edges.size() == 1);
+    ASSERT_TRUE(nfa._graph[0]._edges[0].to() == 1);
+    ASSERT_TRUE(nfa._graph[0]._edges[0].symbol() == "a");
+    ASSERT_TRUE(nfa._graph[1]._edges.size() == 1);
+    ASSERT_TRUE(nfa._graph[1]._edges[0].to() == 0);
+    ASSERT_TRUE(nfa._graph[1]._edges[0].symbol() == "a");
 
     nfa.add_vertices(1);
     ASSERT_TRUE(nfa.size() == 6);
-    ASSERT_TRUE(nfa.graph.size() == 6);
+    ASSERT_TRUE(nfa._graph.size() == 6);
 
     NFA copy = nfa;
     nfa.merge(copy);
     ASSERT_TRUE(nfa.size() == 12);
-    ASSERT_TRUE(nfa.graph[6].edges[0].to == 7);
+    ASSERT_TRUE(nfa._graph[6]._edges[0].to() == 7);
 
     nfa.set_end(2);
 
@@ -216,7 +216,58 @@ TEST_F(NFATestCase, ClearTest) {
     nfa.clear();
 
     ASSERT_EQ(nfa.size(), 0);
-    ASSERT_TRUE(nfa.graph.empty());
-    ASSERT_TRUE(nfa.terminal_vertices.empty());
-    ASSERT_EQ(nfa.start_vertex, 0);
+    ASSERT_TRUE(nfa._graph.empty());
+    ASSERT_TRUE(nfa._terminal_vertices.empty());
+    ASSERT_EQ(nfa._start_vertex, 0);
+}
+
+TEST_F(NFATestCase, IteratorsTest) {
+    NFAVertex vertex;
+    vertex.add_edge(1, "a");
+    vertex.add_edge(2, "aasd");
+    vertex.add_edge(3, "agfd");
+    vertex.add_edge(14, "dfgdfa");
+
+    auto it = vertex.begin();
+    ASSERT_EQ((it.operator->())->to(), 1);
+    auto prev = it++;
+    ASSERT_EQ(it->to(), 2);
+    ASSERT_EQ(prev->to(), 1);
+
+    prev = it--;
+    ASSERT_EQ(it->to(), 1);
+    ASSERT_EQ(prev->to(), 2);
+    ASSERT_EQ((--prev)->to(), 1);
+
+    std::vector<size_t> test = {14, 3, 2, 1};
+    std::vector<size_t> result;
+    for (auto rit = vertex.rbegin(); rit != vertex.rend(); ++rit) {
+        result.push_back((*rit).to());
+    }
+    ASSERT_EQ(result, test);
+    result.clear();
+    const NFAVertex cvertex = vertex;
+    for (auto rit = cvertex.rbegin(); rit != cvertex.rend(); ++rit) {
+        result.push_back((*rit).to());
+    }
+    ASSERT_EQ(result, test);
+}
+
+TEST_F(NFATestCase, EmptyEdgeTest) {
+    NFAEdge edge;
+    ASSERT_EQ(edge.to(), 0);
+    ASSERT_EQ(edge.symbol(), "");
+}
+
+TEST_F(NFATestCase, ClearEdgeTest) {
+    NFAVertex vertex;
+    vertex.add_edge(1, "a");
+    vertex.add_edge(2, "aasd");
+    vertex.add_edge(3, "agfd");
+    vertex.add_edge(14, "dfgdfa");
+
+    ASSERT_EQ(vertex._edges.size(), 4);
+
+    vertex.clear_edges();
+    ASSERT_TRUE(vertex._edges.empty());
 }

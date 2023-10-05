@@ -4,85 +4,143 @@
 #include <tuple>
 #include <deque>
 #include <cstring>
+#include <set>
 #include "NFA.h"
 
-bool NFA::Edge::operator<(const NFA::Edge& edge) const {
-    return tie(to, symbol) < tie(edge.to, symbol);
+
+NFAEdge::NFAEdge() : _to(0) {};
+NFAEdge::NFAEdge(size_t to, std::string symbol) : _to(to), _symbol(std::move(symbol)) {}
+
+bool NFAEdge::operator<(const NFAEdge& other) const {
+    return tie(_to, _symbol) < tie(other._to, other._symbol);
 }
 
-bool NFA::Edge::operator==(const NFA::Edge& edge) const {
-    return (to == edge.to) && (symbol == edge.symbol);
+bool NFAEdge::operator==(const NFAEdge& other) const {
+    return (_to == other._to) && (_symbol == other._symbol);
 }
 
-NFA::NFA() : _size(1), graph(1), start_vertex(0) {
-    set_end(0);
-}
-NFA::NFA(size_t size) : _size(size), graph(size) {}
-
-void NFA::set_start(size_t vertex) {
-    start_vertex = vertex;
+size_t NFAEdge::to() const {
+    return _to;
 }
 
-void NFA::set_end(size_t vertex) {
-    if (!graph[vertex].is_terminal) {
-        graph[vertex].is_terminal = true;
-        terminal_vertices.push_back(vertex);
-    }
+const std::string& NFAEdge::symbol() const {
+    return _symbol;
 }
 
-void NFA::add_edge(size_t from, size_t to, const std::string& symbol) {
-    graph[from].edges.emplace_back(to, symbol);
+NFAVertex::basic_iterator::basic_iterator(GraphType::const_iterator it) : _it(it) {}
+
+const NFAVertex::basic_iterator::value_type& NFAVertex::basic_iterator::operator*() const {
+    return *_it;
+}
+const NFAVertex::basic_iterator::value_type* NFAVertex::basic_iterator::operator->() const {
+    return _it.operator->();
 }
 
-void NFA::add_bidirectional_edge(size_t from, size_t to, const std::string& symbol) {
-    add_edge(from, to, symbol);
-    add_edge(to, from, symbol);
+NFAVertex::basic_iterator& NFAVertex::basic_iterator::operator++() {
+    ++_it;
+    return *this;
 }
 
-size_t NFA::add_vertices(size_t count) {
-    _size += count;
-    graph.resize(_size);
-    return _size - count;
+NFAVertex::basic_iterator NFAVertex::basic_iterator::operator++(int) {
+    auto copy = *this;
+    ++(*this);
+    return copy;
 }
 
-void NFA::remove_all_end_vertices() {
-    while (!terminal_vertices.empty()) {
-        graph[terminal_vertices.back()].is_terminal = false;
-        terminal_vertices.pop_back();
-    }
+NFAVertex::basic_iterator& NFAVertex::basic_iterator::operator--() {
+    --_it;
+    return *this;
 }
 
-size_t NFA::merge(const NFA& other) {
-    size_t shift = size();
-    add_vertices(other.size());
-    for (int i = 0; i < other.size(); ++i) {
-        for (auto& edge : other.graph[i].edges) {
-            graph[i + shift].edges.emplace_back(edge.to + shift, edge.symbol);
-        }
-    }
-    return shift;
+NFAVertex::basic_iterator NFAVertex::basic_iterator::operator--(int) {
+    auto copy = *this;
+    --(*this);
+    return copy;
 }
 
-std::string NFA::to_string() const {
-    std::stringstream ss;
-    ss << start_vertex << "\n\n";
-    for (size_t i : terminal_vertices) {
-        ss << i << '\n';
-    }
-    ss << '\n';
-    for (size_t i = 0; i < size(); ++i) {
-        for (auto& edge : graph[i].edges) {
-            ss << i << ' ' << edge.to << ' ' << edge.symbol << '\n';
-        }
-    }
-    return ss.str();
+bool NFAVertex::basic_iterator::operator==(const NFAVertex::basic_iterator& other) const {
+    return _it == other._it;
+};
+
+NFAVertex& NFAVertex::edges() {
+    return *this;
 }
+
+const NFAVertex& NFAVertex::edges() const {
+    return *this;
+}
+
+NFAVertex::iterator NFAVertex::begin() {
+    return iterator(_edges.begin());
+}
+
+NFAVertex::iterator NFAVertex::end() {
+    return iterator(_edges.end());
+}
+
+NFAVertex::const_iterator NFAVertex::begin() const {
+    return basic_iterator(_edges.begin());
+}
+
+NFAVertex::const_iterator NFAVertex::end() const {
+    return iterator(_edges.end());
+}
+
+NFAVertex::reverse_iterator NFAVertex::rbegin() {
+    return reverse_iterator(end());
+}
+
+NFAVertex::reverse_iterator NFAVertex::rend() {
+    return reverse_iterator(begin());
+}
+
+NFAVertex::const_reverse_iterator NFAVertex::rbegin() const {
+    return reverse_iterator(end());
+}
+
+NFAVertex::const_reverse_iterator NFAVertex::rend() const {
+    return reverse_iterator(begin());
+}
+
+bool NFAVertex::is_terminal() const {
+    return _is_terminal;
+}
+
+void NFAVertex::set_terminal() {
+    set_terminal_value(true);
+}
+
+void NFAVertex::reset_terminal() {
+    set_terminal_value(false);
+}
+
+void NFAVertex::set_terminal_value(bool value) {
+    _is_terminal = value;
+}
+
+void NFAVertex::add_edge(size_t to, const std::string& symbol) {
+    _edges.emplace_back(to, symbol);
+}
+
+void NFAVertex::clear_edges() {
+    _edges.clear();
+}
+
+void NFAVertex::remove_multiple_edges() {
+    std::sort(_edges.begin(), _edges.end());
+    _edges.resize(std::distance(_edges.begin(),
+                                      std::unique(_edges.begin(), _edges.end())));
+}
+
+
+NFA::NFA() : Automaton<NFAVertex, std::string>() {}
+NFA::NFA(size_t size) : Automaton<NFAVertex, std::string>(size) {}
 
 bool NFA::accepts(const std::string& str) {
     size_t max_depth = std::max(static_cast<size_t>(str.size() * MAX_SEARCH_MULTIPLIER),
                              static_cast<size_t>(MAX_SEARCH_MULTIPLIER));
     std::vector< std::pair<int, size_t> > states, next_states;
-    states.emplace_back(start_vertex, 0);
+    states.emplace_back(_start_vertex, 0);
     for (size_t depth = 0; depth < max_depth; ++depth) {
         if (states.empty()) {
             break;
@@ -92,19 +150,18 @@ bool NFA::accepts(const std::string& str) {
             auto [vertex, pos] = states.back();
             states.pop_back();
 
-            if ((pos == str.size()) && graph[vertex].is_terminal) {
+            if ((pos == str.size()) && _graph[vertex].is_terminal()) {
                 return true;
             }
 
-            for (auto& edge : graph[vertex].edges) {
-                if ((pos < str.size()) && (edge.symbol == str.substr(pos, 1))) {
-                    next_states.emplace_back(edge.to, pos + 1);
-                } else if (edge.symbol.empty()) {
-                    next_states.emplace_back(edge.to, pos);
+            for (auto& edge : _graph[vertex].edges()) {
+                if ((pos < str.size()) && (edge.symbol() == str.substr(pos, 1))) {
+                    next_states.emplace_back(edge.to(), pos + 1);
+                } else if (edge.symbol().empty()) {
+                    next_states.emplace_back(edge.to(), pos);
                 }
             }
         }
-
         std::swap(states, next_states);
     }
     return false;
@@ -120,12 +177,12 @@ void NFA::build_transitive_closure_on_empty_edges() {
             size_t cur_vertex = bfs.front();
             bfs.pop_front();
 
-            for (auto& edge : graph[cur_vertex].edges) {
-                if (!edge.symbol.empty() || used[edge.to]) {
+            for (auto& edge : _graph[cur_vertex].edges()) {
+                if (!edge.symbol().empty() || used[edge.to()]) {
                     continue;
                 }
-                bfs.push_back(edge.to);
-                used[edge.to] = 1;
+                bfs.push_back(edge.to());
+                used[edge.to()] = 1;
             }
         }
 
@@ -140,120 +197,62 @@ void NFA::build_transitive_closure_on_empty_edges() {
 
 void NFA::add_terminal_states_by_empty_edges() {
     for (size_t vertex = 0; vertex < size(); ++vertex) {
-        if (graph[vertex].is_terminal) {
+        if (_graph[vertex].is_terminal()) {
             continue;
         }
-        for (auto& edge : graph[vertex].edges) {
-            if (!edge.symbol.empty() || !graph[edge.to].is_terminal) {
+        for (auto& edge : _graph[vertex].edges()) {
+            if (!edge.symbol().empty() || !_graph[edge.to()].is_terminal()) {
                 continue;
             }
-            graph[vertex].is_terminal = true;
-            terminal_vertices.push_back(vertex);
+            set_end(vertex);
             break;
         }
     }
 }
 
 void NFA::add_edges_through_empty_edges() {
-    for (size_t vertex = 0; vertex < size(); ++vertex) {
-        std::vector<Edge> new_edges;
-        for (auto& edge : graph[vertex].edges) {
-            if (!edge.symbol.empty()) {
+    for (auto& vertex : _graph) {
+        NFAVertex new_vertex;
+        new_vertex.set_terminal_value(vertex.is_terminal());
+        for (auto& edge : vertex.edges()) {
+            new_vertex.add_edge(edge.to(), edge.symbol());
+            if (!edge.symbol().empty()) {
                 continue;
             }
-            for (auto& edge_new : graph[edge.to].edges) {
-                if (edge_new.symbol.empty()) {
+            for (auto& edge_new : _graph[edge.to()].edges()) {
+                if (edge_new.symbol().empty()) {
                     continue;
                 }
-                new_edges.emplace_back(edge_new.to, edge_new.symbol);
+                new_vertex.add_edge(edge_new.to(), edge_new.symbol());
             }
         }
-        for (auto& edge : new_edges) {
-            add_edge(vertex, edge.to, edge.symbol);
-        }
+        std::swap(vertex, new_vertex);
     }
 }
 
 void NFA::remove_empty_edges() {
-    for (size_t vertex = 0; vertex < size(); ++vertex) {
-        std::vector<Edge> new_edges;
-        for (auto& edge : graph[vertex].edges) {
-            if (edge.symbol.empty()) {
+    for (auto& vertex : _graph) {
+        NFAVertex new_vertex;
+        new_vertex.set_terminal_value(vertex.is_terminal());
+        for (auto& edge : vertex.edges()) {
+            if (edge.symbol().empty()) {
                 continue;
             }
-            new_edges.push_back(edge);
+            new_vertex.add_edge(edge.to(), edge.symbol());
         }
-        std::swap(new_edges, graph[vertex].edges);
-    }
-}
-
-void NFA::remove_vertex(size_t vertex) {
-    for (auto& other : graph) {
-        std::vector<Edge> new_edges;
-        for (auto& edge : other.edges) {
-            if (edge.to != vertex) {
-                if (edge.to > vertex) {
-                    --edge.to;
-                }
-                new_edges.push_back(edge);
-            }
-        }
-        std::swap(other.edges, new_edges);
-    }
-
-    if (graph[vertex].is_terminal) {
-        terminal_vertices.erase(std::find(
-                terminal_vertices.begin(), terminal_vertices.end(), vertex));
-    }
-    if (start_vertex == vertex) {
-        start_vertex = size();
-    }
-    for (auto& other : terminal_vertices) {
-        if (other > vertex) {
-            --other;
-        }
-    }
-    graph.erase(graph.begin() + vertex);
-    --_size;
-}
-
-void NFA::remove_unreachable_vertices() {
-    std::vector<char> used(size());
-    std::deque<size_t> bfs;
-    bfs.push_back(start_vertex);
-    used[start_vertex] = 1;
-
-    while (!bfs.empty()) {
-        size_t cur_v = bfs.front();
-        bfs.pop_front();
-
-        for (auto& edge : graph[cur_v].edges) {
-            if (used[edge.to]) {
-                continue;
-            }
-            used[edge.to] = 1;
-            bfs.push_back(edge.to);
-        }
-    }
-
-    for (int vertex = size() - 1; vertex > -1; --vertex) {
-        if (!used[vertex]) {
-            remove_vertex(vertex);
-        }
+        std::swap(vertex, new_vertex);
     }
 }
 
 void NFA::remove_multiple_edges() {
-    for (auto& vertex : graph) {
-        std::sort(vertex.edges.begin(), vertex.edges.end());
-        vertex.edges.resize(std::distance(vertex.edges.begin(),
-                                          std::unique(vertex.edges.begin(), vertex.edges.end())
-                                          ));
+    for (auto& vertex : _graph) {
+        vertex.remove_multiple_edges();
     }
 }
 
 void NFA::normalize() {
-    remove_unreachable_vertices();
+    remove_unreachable_from_start_vertices();
+    remove_vertices_unreachable_to_terminal();
     remove_multiple_edges();
 }
 
@@ -265,34 +264,15 @@ void NFA::build_empty_edges_closure() {
     normalize();
 }
 
-size_t NFA::size() const {
-    return _size;
-}
-
-void NFA::clear() {
-    _size = 0;
-    start_vertex = 0;
-    terminal_vertices.clear();
-    graph.clear();
-}
-
-std::string NFA::to_graphviz() const {
-    std::stringstream ss;
-    ss << "digraph NFA {\n";
-    ss << "node [style=\"filled\"];\n";
-    for (size_t vertex = 0; vertex < size(); ++vertex) {
-        for (auto& edge : graph[vertex].edges) {
-            ss << "\"" << vertex << "\" -> \"" << edge.to << "\" [label=\"" << edge.symbol << "\"];\n";
+std::set<char> NFA::get_alphabet() const {
+    std::set<char> alphabet;
+    for (auto& vertex : _graph) {
+        for (auto& edge : vertex.edges()) {
+            if (edge.symbol().empty()) {
+                continue;
+            }
+            alphabet.insert(edge.symbol().front());
         }
     }
-    ss << "\"" << start_vertex << "\" [fillcolor=\"" << (graph[start_vertex].is_terminal ? "yellow" : "green") << "\"];\n";
-    for (auto vertex : terminal_vertices) {
-        if (vertex == start_vertex) {
-            continue;
-        }
-        ss << "\"" << vertex << "\" [fillcolor=\"red\"];\n";
-    }
-    ss << "}\n";
-    return ss.str();
+    return alphabet;
 }
-

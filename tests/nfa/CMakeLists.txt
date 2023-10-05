@@ -16,5 +16,3 @@ run_coverage(
         "${TARGET_NAME}"
         "${COVERAGE_NAME}"
 )
-
-set_property(TARGET nfa-test PROPERTY ENABLE_EXPORTS 1)

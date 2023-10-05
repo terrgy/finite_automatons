@@ -2,11 +2,10 @@
 #include <string>
 #include <sstream>
 #include "NFA.h"
-#include "RegexTreeBuilder.h"
 #include "DFA.h"
 
-std::ostream& operator<<(std::ostream& out, const NFA& nfa) {
-    out << nfa.to_string();
+std::ostream& operator<<(std::ostream& out, const DFA& dfa) {
+    out << dfa.to_string();
     return out;
 }
 
@@ -53,14 +52,10 @@ std::istream& operator>>(std::istream& in, NFA& nfa) {
 }
 
 int main() {
-    std::string regex;
-    std::getline(std::cin, regex);
-    RegExTreeBuilder builder(regex);
-    builder.build();
-    NFA nfa = builder.build_nfa();
+    NFA nfa;
+    std::cin >> nfa;
     nfa.build_empty_edges_closure();
     DFA dfa(nfa);
-    dfa.build_FDFA();
-    std::cout << dfa.to_graphviz() << '\n';
+    std::cout << dfa << '\n';
     return 0;
 }

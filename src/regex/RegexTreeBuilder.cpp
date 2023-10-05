@@ -7,7 +7,7 @@ RegExTreeBuilder::Vertex::Vertex(std::string  operation, std::function<NFA(int, 
 RegExTreeBuilder::Vertex::Vertex(std::string  operation, std::vector<int> edges, std::function<NFA(int, std::vector<Vertex>&)> builder) :
     operation(std::move(operation)), edges(std::move(edges)), builder(std::move(builder)) {}
 
-RegExTreeBuilder::RegExTreeBuilder(std::string& regex) : regex(regex) {}
+RegExTreeBuilder::RegExTreeBuilder(const std::string& regex) : regex(regex) {}
 
 void RegExTreeBuilder::build() {
     std::string result;

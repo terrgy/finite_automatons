@@ -3,7 +3,7 @@ set(COVERAGE_NAME "regex-coverage")
 set(COVERAGE_TARGET "regex-coverage-tree")
 set(SOURCE_DIR_MAIN "${regex_SOURCE_DIR}")
 set(SOURCES "${regex-source-files}")
-set(LIBRARIES "${regex-libraries}")
+set(LIBRARIES ${regex_libraries})
 
 message(INFO ${SOURCES})
 
