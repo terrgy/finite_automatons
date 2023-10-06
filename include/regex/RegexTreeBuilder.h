@@ -129,7 +129,7 @@ struct RegExTreeBuilder {
 
     static void AlphaHandler(int pos, std::vector<Vertex>& graph, std::string& regex) {
         int new_vertex_index = graph.size();
-        graph.emplace_back(regex.substr(pos, 1), RegExTreeBuilder::AlphaNFABuilder);
+        graph.emplace_back(regex[pos] == '!' ? "" : regex.substr(pos, 1), RegExTreeBuilder::AlphaNFABuilder);
         regex.replace(pos, 1, "#" + std::to_string(new_vertex_index) + "#");
         RegExTreeBuilder::RemoveUnnecessaryParenthesis(pos, regex);
     }

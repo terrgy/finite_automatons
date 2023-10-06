@@ -7,11 +7,10 @@
 #include "Automaton.h"
 
 class NFAEdge : EdgesInterface<std::string> {
-private:
+public:
     size_t _to;
     std::string _symbol;
 
-public:
     NFAEdge();
     NFAEdge(size_t to, std::string symbol);
 
@@ -91,4 +90,10 @@ struct NFA : Automaton<NFAVertex, std::string> {
     void remove_multiple_edges();
     void normalize();
     std::set<char> get_alphabet() const;
+    void to_regex_remove_multiple_edges();
+    std::string to_regex_wrap(std::string);
+    std::string to_regex_wrap_kleene(std::string);
+    std::string to_regex_merge_strs(std::string, std::string, size_t);
+    void to_regex_remove_vertex(size_t);
+    std::string to_regex();
 };

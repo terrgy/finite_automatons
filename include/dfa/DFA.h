@@ -94,4 +94,5 @@ struct DFA : Automaton<DFAVertex, char> {
     void build_from_NFA(const NFA& nfa);
     void build_FDFA();
     void rebuild_to_complement();
+    NFA to_NFA();
 };

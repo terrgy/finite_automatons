@@ -21,7 +21,7 @@ void RegExTreeBuilder::build() {
     while (true) {
         bool is_found = false;
         for (int i = 0; i < regex.size(); ++i) {
-            if (isalpha(regex[i])) {
+            if (isalpha(regex[i]) || (regex[i] == '!')) {
                 AlphaHandler(i, graph, regex);
                 is_found = true;
                 break;

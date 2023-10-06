@@ -276,3 +276,159 @@ std::set<char> NFA::get_alphabet() const {
     }
     return alphabet;
 }
+
+std::string NFA::to_regex_wrap(std::string str) {
+    return "(" + str + ")";
+}
+
+std::string NFA::to_regex_wrap_kleene(std::string str) {
+    size_t order = std::stoul(str.substr(str.size() - 1));
+    str.pop_back();
+    if (order == 2) {
+        return "2";
+    }
+    if (order == 4) {
+        return str + "4";
+    }
+    if (order < 4) {
+        return to_regex_wrap(str) + "*4";
+    }
+    return str +"*4";
+}
+
+std::string NFA::to_regex_merge_strs(std::string str1, std::string str2, size_t new_op_order) {
+    size_t order1 = std::stoul(str1.substr(str1.size() - 1));
+    size_t order2 = std::stoul(str2.substr(str2.size() - 1));
+    str1.pop_back();
+    str2.pop_back();
+    if (new_op_order == 0) {
+        if (str1.empty()) {
+            str1 = "!";
+        }
+        if (str2.empty()) {
+            str2 = "!";
+        }
+    }
+    if ((new_op_order == 1) && ((order1 == 2) || (order2 == 2))) {
+        if (order2 == 2) {
+            std::swap(str1, str2);
+            std::swap(order1, order2);
+        }
+        return str2 + std::to_string(order2);
+    }
+    if (order1 < new_op_order) {
+        str1 = to_regex_wrap(str1);
+    }
+    if (order2 < new_op_order) {
+        str2 = to_regex_wrap(str2);
+    }
+    str1 = to_regex_wrap(str1);
+    str2 = to_regex_wrap(str2);
+    return str1 + (new_op_order ? "" : "+") + str2 + std::to_string(new_op_order);
+}
+
+void NFA::to_regex_remove_multiple_edges() {
+    for (size_t vertex = 0; vertex < size(); ++vertex) {
+        std::map<size_t, std::vector< std::string> > edges;
+        for (auto& edge : _graph[vertex].edges()) {
+            if ((edge.to() == vertex) && edge.symbol().empty()) {
+                continue;
+            }
+            edges[edge.to()].push_back(edge.symbol());
+        }
+        NFAVertex new_vertex;
+        new_vertex.set_terminal_value(_graph[vertex].is_terminal());
+        for (auto& [to, vec] : edges) {
+            std::sort(vec.begin(), vec.end());
+            vec.resize(std::distance(vec.begin(), std::unique(vec.begin(), vec.end())));
+            std::string new_edge = vec[0];
+            for (size_t i = 1; i < vec.size(); ++i) {
+                new_edge = to_regex_merge_strs(new_edge, vec[i], 0);
+            }
+            new_vertex.add_edge(to, new_edge);
+        }
+        std::swap(new_vertex, _graph[vertex]);
+    }
+}
+
+void NFA::to_regex_remove_vertex(size_t target) {
+    std::vector< std::pair<size_t, std::string> > in_edges;
+    for (size_t vertex = 0; vertex < size(); ++vertex) {
+        if (vertex == target) {
+            continue;
+        }
+        for (auto& edge : _graph[vertex].edges()) {
+            if (edge.to() == target) {
+                in_edges.emplace_back(vertex, edge.symbol());
+            }
+        }
+    }
+
+    std::string kleene_edge = "2";
+    for (auto& edge : _graph[target]) {
+        if (edge.to() == target) {
+            kleene_edge = to_regex_wrap_kleene(edge.symbol());
+            break;
+        }
+    }
+    for (auto& [from_edge, from_symbol] : in_edges) {
+        for (auto& out_edge : _graph[target]) {
+            if (out_edge.to() == target) {
+                continue;
+            }
+            std::string new_edge = to_regex_merge_strs(from_symbol, kleene_edge, 1);
+            new_edge = to_regex_merge_strs(new_edge, out_edge.symbol(), 1);
+            add_edge(from_edge, out_edge.to(), new_edge);
+        }
+    }
+    remove_vertex(target);
+}
+
+std::string NFA::to_regex() {
+    normalize();
+    size_t end_vertex = add_vertices(1);
+    for (auto vertex : _terminal_vertices) {
+        add_edge(vertex, end_vertex, "");
+    }
+    remove_all_end_vertices();
+    set_end(end_vertex);
+
+    for (auto& vertex : _graph) {
+        for (auto& edge : vertex._edges) {
+            if (edge._symbol.empty()) {
+                edge._symbol.push_back('2');
+            }
+            else {
+                edge._symbol.push_back('5');
+            }
+        }
+    }
+
+    to_regex_remove_multiple_edges();
+    while (size() > 2) {
+        for (size_t i = 0; i < size() - 1; ++i) {
+            if ((i == _start_vertex) || _graph[i].is_terminal()) {
+                continue;
+            }
+            to_regex_remove_vertex(i);
+            to_regex_remove_multiple_edges();
+            break;
+        }
+    }
+
+    std::string kleene_edge, end_edge;
+    kleene_edge = end_edge = "2";
+    for (auto& edge : _graph[_start_vertex]) {
+        if (edge.to() == _start_vertex) {
+            kleene_edge = to_regex_wrap_kleene(edge.symbol());
+        } else {
+            end_edge = edge.symbol();
+        }
+    }
+    end_edge = to_regex_merge_strs(kleene_edge, end_edge, 1);
+    if (end_edge == "2") {
+        return "!";
+    }
+    end_edge.pop_back();
+    return end_edge;
+}

@@ -229,3 +229,18 @@ void DFA::rebuild_to_complement() {
         }
     }
 }
+
+NFA DFA::to_NFA() {
+    NFA nfa(size());
+    nfa.set_start(_start_vertex);
+    for (auto vertex : _terminal_vertices) {
+        nfa.set_end(vertex);
+    }
+
+    for (size_t vertex = 0; vertex < size(); ++vertex) {
+        for (auto& edge : _graph[vertex].edges()) {
+            nfa.add_edge(vertex, edge.to(), std::string(1, edge.symbol()));
+        }
+    }
+    return nfa;
+}

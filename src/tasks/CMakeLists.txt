@@ -17,3 +17,6 @@ target_link_libraries(build_fdfa automaton dfa)
 
 add_executable(build_complement_to_dfa build_complement_to_dfa.cpp)
 target_link_libraries(build_complement_to_dfa automaton dfa)
+
+add_executable(regex_from_nfa regex_from_fdfa.cpp)
+target_link_libraries(regex_from_nfa nfa dfa regex)
